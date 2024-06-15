@@ -138,7 +138,6 @@ def delete_tag(tag_id):
     db.session.commit()
     return jsonify({'message': 'Tag deleted'})
 
-# Voting for a request
 @main.route('/requests/<int:request_id>/vote', methods=['POST'])
 def vote_request(request_id):
     data = request.get_json()
@@ -151,3 +150,10 @@ def vote_request(request_id):
     req.voters.append(user)
     db.session.commit()
     return jsonify({'message': 'Vote added'})
+
+@main.route('/requests/<int:request_id>/votes', methods=['GET'])
+def get_votes(request_id):
+    req = Request.query.get_or_404(request_id)
+    voters = [user.to_dict() for user in req.voters]
+    vote_count = len(voters)
+    return jsonify({'voters': voters, 'vote_count': vote_count}), 200

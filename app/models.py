@@ -51,7 +51,8 @@ class Request(db.Model):
             'description': self.description,
             'image': self.image,
             'creator_id': self.creator_id,
-            'tags': [tag.name for tag in self.tags]
+            'tags': [tag.name for tag in self.tags],
+            'voters': [user.to_dict() for user in self.voters]
         }
 
 class Tag(db.Model):
