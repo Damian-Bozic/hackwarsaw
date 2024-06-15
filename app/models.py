@@ -1,66 +1,45 @@
-from . import db
+from flask import current_app
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from app import db, login_manager
 
-user_request = db.Table('user_request',
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('request_id', db.Integer, db.ForeignKey('request.id'), primary_key=True)
-)
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-request_tag = db.Table('request_tag',
-    db.Column('request_id', db.Integer, db.ForeignKey('request.id'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
-)
-
-class User(db.Model):
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    surname = db.Column(db.String(50), nullable=False)
-    phone = db.Column(db.String(15), nullable=False)
-    pesel = db.Column(db.String(11), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    street = db.Column(db.String(120), nullable=False)
-    postal_code = db.Column(db.String(10), nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    first_name = db.Column(db.String(30), nullable=False)
+    last_name = db.Column(db.String(30), nullable=False)
+    street_address = db.Column(db.String(100), nullable=False)
+    postal_code = db.Column(db.String(20), nullable=False)
     city = db.Column(db.String(50), nullable=False)
-    requests = db.relationship('Request', secondary=user_request, backref='voters')
+    youtube_link = db.Column(db.String(120))
+    instagram_link = db.Column(db.String(120))
+    bank_account_id = db.Column(db.Integer, db.ForeignKey('bank_account.id'))
+    art_type_id = db.Column(db.Integer, db.ForeignKey('art_type.id'))
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'surname': self.surname,
-            'phone': self.phone,
-            'pesel': self.pesel,
-            'email': self.email,
-            'street': self.street,
-            'postal_code': self.postal_code,
-            'city': self.city
-        }
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-class Request(db.Model):
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+class BankAccount(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    image = db.Column(db.String(200))
-    tags = db.relationship('Tag', secondary=request_tag, backref='requests')
-    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    creator = db.relationship('User', backref='created_requests')
+    account_holder_name = db.Column(db.String(100), nullable=False)
+    account_number = db.Column(db.String(20), nullable=False)
+    routing_number = db.Column(db.String(9), nullable=False)
+    user = db.relationship('User', backref='bank_account', lazy=True)
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'image': self.image,
-            'creator_id': self.creator_id,
-            'tags': [tag.name for tag in self.tags],
-            'voters': [user.to_dict() for user in self.voters]
-        }
-
-class Tag(db.Model):
+class ArtType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
+    type_name = db.Column(db.String(50), nullable=False)
+    subtypes = db.relationship('ArtSubtype', backref='art_type', lazy=True)
 
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name
-        }
+class ArtSubtype(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    subtype_name = db.Column(db.String(50), nullable=False)
+    art_type_id = db.Column(db.Integer, db.ForeignKey('art_type.id'))

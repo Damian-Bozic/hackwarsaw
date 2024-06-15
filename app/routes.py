@@ -1,159 +1,66 @@
-from flask import Blueprint, request, jsonify
-from . import db
-from .models import User, Request, Tag
+from flask import Blueprint, render_template, url_for, flash, redirect, request, jsonify, current_app
+from app import db, bcrypt
+from app.models import User, BankAccount, ArtType, ArtSubtype
+import stripe
 
-main = Blueprint('main', __name__)
+bp = Blueprint('routes', __name__)
 
-# CRUD for User
-@main.route('/users', methods=['POST'])
-def create_user():
+@bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        street_address = request.form['street_address']
+        postal_code = request.form['postal_code']
+        city = request.form['city']
+        youtube_link = request.form['youtube_link']
+        instagram_link = request.form['instagram_link']
+        art_type_id = request.form['art_type_id']
+
+        user = User(email=email, first_name=first_name, last_name=last_name,
+                    street_address=street_address, postal_code=postal_code, city=city,
+                    youtube_link=youtube_link, instagram_link=instagram_link, art_type_id=art_type_id)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        flash('Your account has been created!', 'success')
+        return redirect(url_for('routes.login'))
+
+    return render_template('register.html')
+
+@bp.route('/bank_account', methods=['GET', 'POST'])
+def bank_account():
+    if request.method == 'POST':
+        account_holder_name = request.form['account_holder_name']
+        account_number = request.form['account_number']
+        routing_number = request.form['routing_number']
+        user_id = request.form['user_id']
+
+        bank_account = BankAccount(account_holder_name=account_holder_name,
+                                   account_number=account_number, routing_number=routing_number, user_id=user_id)
+        db.session.add(bank_account)
+        db.session.commit()
+
+        flash('Bank account added successfully!', 'success')
+        return redirect(url_for('routes.profile', user_id=user_id))
+
+    return render_template('bank_account.html')
+
+@bp.route('/create_payment_intent', methods=['POST'])
+def create_payment_intent():
     data = request.get_json()
-    new_user = User(
-        name=data['name'],
-        surname=data['surname'],
-        phone=data['phone'],
-        pesel=data['pesel'],
-        email=data['email'],
-        street=data['street'],
-        postal_code=data['postal_code'],
-        city=data['city']
+    amount = data['amount']
+
+    stripe.api_key = current_app.config['STRIPE_SECRET_KEY']
+    intent = stripe.PaymentIntent.create(
+        amount=amount,
+        currency='usd',
+        payment_method_types=['card'],
     )
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({'message': 'User created'}), 201
 
-@main.route('/users', methods=['GET'])
-def get_users():
-    users = User.query.all()
-    return jsonify([user.to_dict() for user in users])
-
-@main.route('/users/<int:user_id>', methods=['GET'])
-def get_user(user_id):
-    user = User.query.get_or_404(user_id)
-    return jsonify(user.to_dict())
-
-@main.route('/users/<int:user_id>', methods=['PUT'])
-def update_user(user_id):
-    data = request.get_json()
-    user = User.query.get_or_404(user_id)
-    user.name = data.get('name', user.name)
-    user.surname = data.get('surname', user.surname)
-    user.phone = data.get('phone', user.phone)
-    user.pesel = data.get('pesel', user.pesel)
-    user.email = data.get('email', user.email)
-    user.street = data.get('street', user.street)
-    user.postal_code = data.get('postal_code', user.postal_code)
-    user.city = data.get('city', user.city)
-    db.session.commit()
-    return jsonify({'message': 'User updated'})
-
-@main.route('/users/<int:user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    user = User.query.get_or_404(user_id)
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({'message': 'User deleted'})
-
-# CRUD for Request
-@main.route('/requests', methods=['POST'])
-def create_request():
-    data = request.get_json()
-    user = User.query.get(data['creator_id'])
-    if not user:
-        return jsonify({'message': 'User not found'}), 404
-    new_request = Request(
-        name=data['name'],
-        description=data['description'],
-        image=data.get('image'),
-        creator=user
-    )
-    if 'tags' in data:
-        for tag_name in data['tags']:
-            tag = Tag.query.filter_by(name=tag_name).first()
-            if not tag:
-                tag = Tag(name=tag_name)
-            new_request.tags.append(tag)
-    db.session.add(new_request)
-    db.session.commit()
-    return jsonify({'message': 'Request created'}), 201
-
-@main.route('/requests', methods=['GET'])
-def get_requests():
-    requests = Request.query.all()
-    return jsonify([request.to_dict() for request in requests])
-
-@main.route('/requests/<int:request_id>', methods=['GET'])
-def get_request(request_id):
-    req = Request.query.get_or_404(request_id)
-    return jsonify(req.to_dict())
-
-@main.route('/requests/<int:request_id>', methods=['PUT'])
-def update_request(request_id):
-    data = request.get_json()
-    req = Request.query.get_or_404(request_id)
-    req.name = data.get('name', req.name)
-    req.description = data.get('description', req.description)
-    req.image = data.get('image', req.image)
-    db.session.commit()
-    return jsonify({'message': 'Request updated'})
-
-@main.route('/requests/<int:request_id>', methods=['DELETE'])
-def delete_request(request_id):
-    req = Request.query.get_or_404(request_id)
-    db.session.delete(req)
-    db.session.commit()
-    return jsonify({'message': 'Request deleted'})
-
-# CRUD for Tag
-@main.route('/tags', methods=['POST'])
-def create_tag():
-    data = request.get_json()
-    new_tag = Tag(name=data['name'])
-    db.session.add(new_tag)
-    db.session.commit()
-    return jsonify({'message': 'Tag created'}), 201
-
-@main.route('/tags', methods=['GET'])
-def get_tags():
-    tags = Tag.query.all()
-    return jsonify([tag.to_dict() for tag in tags])
-
-@main.route('/tags/<int:tag_id>', methods=['GET'])
-def get_tag(tag_id):
-    tag = Tag.query.get_or_404(tag_id)
-    return jsonify(tag.to_dict())
-
-@main.route('/tags/<int:tag_id>', methods=['PUT'])
-def update_tag(tag_id):
-    data = request.get_json()
-    tag = Tag.query.get_or_404(tag_id)
-    tag.name = data.get('name', tag.name)
-    db.session.commit()
-    return jsonify({'message': 'Tag updated'})
-
-@main.route('/tags/<int:tag_id>', methods=['DELETE'])
-def delete_tag(tag_id):
-    tag = Tag.query.get_or_404(tag_id)
-    db.session.delete(tag)
-    db.session.commit()
-    return jsonify({'message': 'Tag deleted'})
-
-@main.route('/requests/<int:request_id>/vote', methods=['POST'])
-def vote_request(request_id):
-    data = request.get_json()
-    user = User.query.get(data['user_id'])
-    req = Request.query.get(request_id)
-    if not user or not req:
-        return jsonify({'message': 'User or Request not found'}), 404
-    if user in req.voters:
-        return jsonify({'message': 'User has already voted'}), 400
-    req.voters.append(user)
-    db.session.commit()
-    return jsonify({'message': 'Vote added'})
-
-@main.route('/requests/<int:request_id>/votes', methods=['GET'])
-def get_votes(request_id):
-    req = Request.query.get_or_404(request_id)
-    voters = [user.to_dict() for user in req.voters]
-    vote_count = len(voters)
-    return jsonify({'voters': voters, 'vote_count': vote_count}), 200
+    return jsonify({
+        'clientSecret': intent['client_secret']
+    })
