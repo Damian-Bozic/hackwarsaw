@@ -9,6 +9,7 @@
     <style>
         .project-card {
             margin-bottom: 20px;
+            margin-top: 40px;
         }
         .card-title {
             font-size: 1.25rem;
@@ -17,12 +18,41 @@
             color: red;
         }
         .steps-section {
-            text-align: center;
-            margin: 40px 0;
+            padding: 10px 0;
         }
+
+        .steps-section .step-box {
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            margin: 10px;
+        }
+
+        .steps-section .step-box img {
+            width: 30px;
+            height: 30px;
+            margin-bottom: 10px;
+        }
+
+        .steps-section .text-left, .steps-section .text-right {
+            padding: 0 50px;
+        }
+
+        .steps-section .col-md-1 img {
+            width: 30px;
+            height: 30px;
+        }
+
         .map-section {
-            margin-top: 20px;
+            padding: 0px;
+            background-color: #f8f9fa; 
         }
+
+        .map-section iframe {
+            border-radius: 0px; 
+        }
+
         .modal-login {
             text-align: left;
         }
@@ -35,6 +65,28 @@
         .modal-login .btn {
             border-radius: 0.25rem;
         }
+
+        .input-group-prepend .input-group-text {
+            background-color: white;
+            border-right: 0;
+            font-weight: bold;
+        }
+
+        .input-group .form-control {
+            border-left: 0;
+        }
+
+        .input-group-append .btn {
+            background-color: #dc3545;
+            color: white;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        .input-group-append .btn .fas {
+            margin: 0;
+        }
+
     </style>
 </head>
 <body>
@@ -55,44 +107,84 @@
 
     <!-- Search Section -->
     <div class="container mt-4">
-        <div class="row">
-            <div class="col-md-6">
-                <input type="text" class="form-control" placeholder="Search by project name">
-            </div>
-            <div class="col-md-6">
-                <input type="text" class="form-control" placeholder="Search by location">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text" id="search-projects-label">Projects</span>
+                    </div>
+                    <input type="text" class="form-control" placeholder="Search by project name" aria-label="Projects" aria-describedby="search-projects-label">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text" id="search-districts-label">Districts</span>
+                    </div>
+                    <input type="text" class="form-control" placeholder="Search by location" aria-label="Districts" aria-describedby="search-districts-label">
+                    <div class="input-group-append">
+                        <button class="btn btn-danger" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+
 
     <!-- Steps Section -->
-    <div class="container steps-section">
-        <h2>Help Your Community In <span class="text-danger">3 Simple Steps</span></h2>
-        <div class="row justify-content-center">
-            <div class="col-md-3 text-center">
-                <p><img src="https://via.placeholder.com/50" alt="Step 1"><br>Found the project</p>
+    <div class="container mt-4 steps-section bg-light">
+        <div class="row align-items-center">
+            <div class="col-md-4 text-left">
+                <h2>Help Your Community In <span class="text-danger">3 Simple Steps</span></h2>
+                <p>more text</p>
             </div>
-            <div class="col-md-3 text-center">
-                <p><img src="https://via.placeholder.com/50" alt="Step 2"><br>Donate or vote</p>
-            </div>
-            <div class="col-md-3 text-center">
-                <p><img src="https://via.placeholder.com/50" alt="Step 3"><br>Share it</p>
+            <div class="col-md-8">
+                <div class="row justify-content-center align-items-center">
+                    <div class="col-md-3 text-center">
+                        <div class="step-box">
+                            <img src="{{ url_for('static', filename='icons/Search.png') }}" alt="Step 1"><br>Found a project
+                        </div>
+                    </div>
+                    <div class="col-md-1 text-center">
+                        <img src="{{ url_for('static', filename='icons/Icon-Wrapper.png') }}" alt="Icon Wrapper">
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="step-box">
+                            <img src="{{ url_for('static', filename='icons/Stock.png') }}" alt="Step 2"><br>Donate or vote
+                        </div>
+                    </div>
+                    <div class="col-md-1 text-center">
+                        <img src="{{ url_for('static', filename='icons/Icon-Wrapper.png') }}" alt="Icon Wrapper">
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <div class="step-box">
+                            <img src="{{ url_for('static', filename='icons/ShareAlt.png') }}" alt="Step 3"><br>Share it
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+
     <!-- Projects Section -->
-    <div class="container">
+    <div class="container mt-4">
         <div class="row" id="projects-container">
             <!-- Project Cards will be inserted here dynamically -->
         </div>
     </div>
 
     <!-- Map Section -->
-    <div class="container map-section">
-        <h2>Help Your Community In <span class="text-danger">3 Simple Steps</span></h2>
-        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3151.8354345093746!2d144.95373531531665!3d-37.81627927975154!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6ad642af0f11fd81%3A0xf577e5ef7bfbcd17!2sVictoria!5e0!3m2!1sen!2sau!4v1615130413813!5m2!1sen!2sau" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+    <div class="container map-section bg-light mt-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3151.8354345093746!2d144.95373531531665!3d-37.81627927975154!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6ad642af0f11fd81%3A0xf577e5ef7bfbcd17!2sVictoria!5e0!3m2!1sen!2sau!4v1615130413813!5m2!1sen!2sau" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+            </div>
+            <div class="col-md-4">
+                <h2>ve las direcciones <span class="text-danger">de los proyectos</span></h2>
+                <p>more text</p>
+            </div>
+        </div>
     </div>
+
 
     <!-- Login Modal -->
     <div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">

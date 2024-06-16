@@ -1,5 +1,6 @@
 from flask_login import UserMixin
 from . import db
+from flask import url_for
 
 user_request = db.Table('user_request',
                         db.Column('user_id', db.Integer, db.ForeignKey(
@@ -59,7 +60,7 @@ class Request(db.Model):
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'image': self.image,
+            'image':  url_for('static', filename=f'uploads/{self.image}') if self.image else None,
             'creator_id': self.creator_id,
             'tags': [tag.name for tag in self.tags],
             'voters': [user.to_dict() for user in self.voters]
