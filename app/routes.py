@@ -1,10 +1,18 @@
-from flask import Blueprint, request, jsonify, redirect, url_for
+import os
+from flask import Blueprint, request, jsonify, redirect, url_for, render_template, session, current_app
+from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required, current_user
 from . import db
 from .models import User, Request, Tag
 
 main = Blueprint('main', __name__)
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @main.route('/register', methods=['POST'])
@@ -35,7 +43,8 @@ def login():
     if not user or not check_password_hash(user.password, data['password']):
         return jsonify({'message': 'Login failed'}), 401
     login_user(user)
-    return jsonify({'message': 'Login successful'})
+    session['user_id'] = user.id
+    return jsonify({'message': 'Login successful', 'user_id': user.id})
 
 
 @main.route('/logout', methods=['POST'])
@@ -43,30 +52,6 @@ def login():
 def logout():
     logout_user()
     return jsonify({'message': 'Logout successful'})
-
-
-@main.route('/protected', methods=['GET'])
-@login_required
-def protected():
-    return jsonify({'message': f'Hello, {current_user.name}! This is a protected route.'})
-
-
-@main.route('/users', methods=['POST'])
-def create_user():
-    data = request.get_json()
-    new_user = User(
-        name=data['name'],
-        surname=data['surname'],
-        phone=data['phone'],
-        pesel=data['pesel'],
-        email=data['email'],
-        street=data['street'],
-        postal_code=data['postal_code'],
-        city=data['city']
-    )
-    db.session.add(new_user)
-    db.session.commit()
-    return jsonify({'message': 'User created'}), 201
 
 
 @main.route('/users', methods=['GET'])
@@ -106,23 +91,33 @@ def delete_user(user_id):
 
 
 @main.route('/requests', methods=['POST'])
+@login_required  # Asegúrate de que esta ruta requiera autenticación
 def create_request():
-    data = request.get_json()
-    user = User.query.get(data['creator_id'])
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User not logged in'}), 401
+
+    user = User.query.get(user_id)
     if not user:
         return jsonify({'message': 'User not found'}), 404
+
+    name = request.form.get('name')
+    description = request.form.get('description')
+
+    file = request.files.get('image')
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file.save(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+        image_url = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+    else:
+        image_url = None
+
     new_request = Request(
-        name=data['name'],
-        description=data['description'],
-        image=data.get('image'),
+        name=name,
+        description=description,
+        image=image_url,
         creator=user
     )
-    if 'tags' in data:
-        for tag_name in data['tags']:
-            tag = Tag.query.filter_by(name=tag_name).first()
-            if not tag:
-                tag = Tag(name=tag_name)
-            new_request.tags.append(tag)
     db.session.add(new_request)
     db.session.commit()
     return jsonify({'message': 'Request created'}), 201
@@ -198,17 +193,26 @@ def delete_tag(tag_id):
 
 
 @main.route('/requests/<int:request_id>/vote', methods=['POST'])
+@login_required
 def vote_request(request_id):
-    data = request.get_json()
-    user = User.query.get(data['user_id'])
-    req = Request.query.get(request_id)
-    if not user or not req:
-        return jsonify({'message': 'User or Request not found'}), 404
-    if user in req.voters:
-        return jsonify({'message': 'User has already voted'}), 400
-    req.voters.append(user)
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'message': 'User not logged in'}), 401
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    request = Request.query.get(request_id)
+    if not request:
+        return jsonify({'message': 'Request not found'}), 404
+
+    if user in request.voters:
+        return jsonify({'message': 'User has already voted for this request'}), 400
+
+    request.voters.append(user)
     db.session.commit()
-    return jsonify({'message': 'Vote added'})
+    return jsonify({'message': 'Vote recorded', 'votes': len(request.voters)}), 200
 
 
 @main.route('/requests/<int:request_id>/votes', methods=['GET'])
@@ -217,3 +221,8 @@ def get_votes(request_id):
     voters = [user.to_dict() for user in req.voters]
     vote_count = len(voters)
     return jsonify({'voters': voters, 'vote_count': vote_count}), 200
+
+
+@main.route('/')
+def page():
+    return render_template('page.html')

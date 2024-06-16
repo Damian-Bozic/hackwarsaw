@@ -2,14 +2,19 @@ from flask_login import UserMixin
 from . import db
 
 user_request = db.Table('user_request',
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
-    db.Column('request_id', db.Integer, db.ForeignKey('request.id'), primary_key=True)
-)
+                        db.Column('user_id', db.Integer, db.ForeignKey(
+                            'user.id'), primary_key=True),
+                        db.Column('request_id', db.Integer, db.ForeignKey(
+                            'request.id'), primary_key=True)
+                        )
 
 request_tag = db.Table('request_tag',
-    db.Column('request_id', db.Integer, db.ForeignKey('request.id'), primary_key=True),
-    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True)
-)
+                       db.Column('request_id', db.Integer, db.ForeignKey(
+                           'request.id'), primary_key=True),
+                       db.Column('tag_id', db.Integer, db.ForeignKey(
+                           'tag.id'), primary_key=True)
+                       )
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -21,8 +26,9 @@ class User(UserMixin, db.Model):
     street = db.Column(db.String(120), nullable=False)
     postal_code = db.Column(db.String(10), nullable=False)
     city = db.Column(db.String(50), nullable=False)
-    password = db.Column(db.String(128), nullable=False) 
-    requests = db.relationship('Request', secondary=user_request, backref='voters')
+    password = db.Column(db.String(128), nullable=False)
+    requests = db.relationship(
+        'Request', secondary=user_request, backref='voters')
 
     def to_dict(self):
         return {
@@ -37,13 +43,15 @@ class User(UserMixin, db.Model):
             'city': self.city
         }
 
+
 class Request(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
     image = db.Column(db.String(200))
     tags = db.relationship('Tag', secondary=request_tag, backref='requests')
-    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    creator_id = db.Column(
+        db.Integer, db.ForeignKey('user.id'), nullable=False)
     creator = db.relationship('User', backref='created_requests')
 
     def to_dict(self):
@@ -54,8 +62,9 @@ class Request(db.Model):
             'image': self.image,
             'creator_id': self.creator_id,
             'tags': [tag.name for tag in self.tags],
-            'voters': [user.to_dict() for user in self.voters]  
+            'voters': [user.to_dict() for user in self.voters]
         }
+
 
 class Tag(db.Model):
     id = db.Column(db.Integer, primary_key=True)
